@@ -2,9 +2,10 @@
   "name": "taiz-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
@@ -16,5 +17,14 @@
     "multer": "^2.0.2",
     "pdfkit": "^0.17.2",
     "pg": "^8.16.3"
-  }
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kekkeekkeek400-debug/taiz-backend2.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kekkeekkeek400-debug/taiz-backend2/issues"
+  },
+  "homepage": "https://github.com/kekkeekkeek400-debug/taiz-backend2#readme"
 }
