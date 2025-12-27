@@ -13,6 +13,43 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
+app.get("/test", (req, res) => {
+  res.send(`
+    <html>
+    <body style="font-family:sans-serif; padding:40px;">
+      <h2>Taiz Registration Test</h2>
+      <form id="f">
+        <input placeholder="Full name" id="name"/><br><br>
+        <input placeholder="Phone" id="phone"/><br><br>
+        <input placeholder="City" id="city"/><br><br>
+        <select id="role">
+          <option value="driver">Driver</option>
+          <option value="customer">Customer</option>
+        </select><br><br>
+        <button type="submit">Send</button>
+      </form>
+      <pre id="out"></pre>
+
+      <script>
+        document.getElementById("f").onsubmit = async (e)=>{
+          e.preventDefault();
+          const res = await fetch("/register",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({
+              full_name: name.value,
+              phone: phone.value,
+              city: city.value,
+              role: role.value
+            })
+          });
+          out.textContent = await res.text();
+        }
+      </script>
+    </body>
+    </html>
+  `);
+});
 
 // اختبار أن السيرفر يعمل
 app.get("/", (req, res) => {
