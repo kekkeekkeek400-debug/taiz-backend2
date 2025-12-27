@@ -18,6 +18,16 @@ const pool = new Pool({
 app.get("/", (req, res) => {
   res.send("Taiz backend is running 🚀");
 });
+// اختبار الاتصال بقاعدة البيانات
+app.get("/db", async (req, res) => {
+  try {
+    const r = await pool.query("SELECT NOW()");
+    res.json({ database_time: r.rows[0] });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // تسجيل مستخدم (عميل أو مزود)
 app.post("/register", async (req, res) => {
