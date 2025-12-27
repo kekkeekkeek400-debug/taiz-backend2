@@ -12,5 +12,18 @@
     "cors": "^2.8.5",
     "multer": "^1.4.5",
     "pdfkit": "^0.15.0"
-  }
+  },
+  "description": "",
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kekkeekkeek400-debug/taiz-backend2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kekkeekkeek400-debug/taiz-backend2/issues"
+  },
+  "homepage": "https://github.com/kekkeekkeek400-debug/taiz-backend2#readme"
 }
