@@ -280,11 +280,12 @@ app.post("/book", async (req, res) => {
 
     const booking = await pool.query(
       `INSERT INTO bookings 
-   (user_id, service_id, start_date, end_date, people_count, status)
-   VALUES ($1, $2, $3, $3, 1, 'pending')
+   (client_id, service_id, start_date, end_date, status)
+   VALUES ($1, $2, $3, $4, 'pending')
    RETURNING *`,
-      [user_id, service_id, date]
+      [user_id, service_id, start_date, end_date]
     );
+
 
     res.json({ success: true, booking: booking.rows[0] });
 
@@ -380,6 +381,67 @@ app.get("/provider/notifications/:provider_id", async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+// =================== GET SERVICES ===================
+app.get("/services", async (req, res) => {
+  try {
+    const r = await pool.query(`
+      SELECT 
+        s.id, s.name, s.type, s.description, s.price,
+        s.lat, s.lng,
+        u.full_name AS provider_name
+      FROM services s
+      JOIN users u ON s.provider_id = u.id
+      WHERE u.is_active = true
+    `);
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+// =================== CLIENT BOOKINGS ===================
+app.get("/client/bookings/:user_id", async (req, res) => {
+  try {
+    const { user_id } = req.params;
+
+    const r = await pool.query(`
+      SELECT 
+        b.id,
+        b.start_date,
+        b.end_date,
+        b.status,
+        s.name AS service_name
+      FROM bookings b
+      JOIN services s ON b.service_id = s.id
+      WHERE b.user_id = $1
+      ORDER BY b.start_date DESC
+    `, [user_id]);
+
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+app.get("/provider/bookings/:provider_id", async (req, res) => {
+  const { provider_id } = req.params;
+
+  const r = await pool.query(`
+    SELECT 
+      b.id,
+      b.start_date,
+      b.end_date,
+      b.people_count,
+      b.status,
+      u.full_name AS client_name,
+      s.name AS service_name
+    FROM bookings b
+    JOIN users u ON b.user_id = u.id
+    JOIN services s ON b.service_id = s.id
+    WHERE s.provider_id = $1
+    ORDER BY b.start_date DESC
+  `, [provider_id]);
+
+  res.json(r.rows);
 });
 
 // =================== START ===================
