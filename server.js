@@ -138,6 +138,44 @@ app.post("/register", async (req, res) => {
     res.status(400).json({ error: e.message });
   }
 });
+import crypto from "crypto";
+
+const activationCodes = new Map();
+
+app.post("/admin/create-code", async (req, res) => {
+  const { admin_code, user_id } = req.body;
+
+  const admin = await pool.query(
+    "SELECT * FROM admins WHERE code=$1",
+    [admin_code]
+  );
+
+  if (admin.rowCount === 0) {
+    return res.status(401).json({ error: "Invalid admin code" });
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  activationCodes.set(user_id, code);
+
+  res.json({ code });
+});
+
+app.post("/activate", async (req, res) => {
+  const { user_id, code } = req.body;
+
+  if (activationCodes.get(user_id) !== code) {
+    return res.status(400).json({ error: "Invalid code" });
+  }
+
+  await pool.query(
+    "UPDATE users SET is_active=true WHERE id=$1",
+    [user_id]
+  );
+
+  activationCodes.delete(user_id);
+
+  res.json({ success: true });
+});
 
 // تشغيل السيرفر (Railway سيعطي PORT)
 const PORT = process.env.PORT || 3000;
