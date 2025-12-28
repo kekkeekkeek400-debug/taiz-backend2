@@ -8,11 +8,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// اتصال قاعدة البيانات (سيأتي من Railway لاحقًا)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
+
+
+// =================== TEST PAGE ===================
 app.get("/test", (req, res) => {
   res.send(`
  <html>
@@ -53,77 +55,34 @@ async function register() {
   document.getElementById("out").textContent = txt;
 }
 </script>
-
     </body>
     </html>
   `);
 });
 
-// اختبار أن السيرفر يعمل
+// =================== BASIC ===================
 app.get("/", (req, res) => {
   res.send("Taiz backend is running 🚀");
 });
-// اختبار الاتصال بقاعدة البيانات
+
 app.get("/db", async (req, res) => {
   try {
     const r = await pool.query("SELECT NOW()");
     res.json({ database_time: r.rows[0] });
   } catch (e) {
-    console.error(e);
     res.status(500).json({ error: e.message });
   }
 });
 
-// تسجيل مستخدم (عميل أو مزود)
+// =================== REGISTER ===================
 app.post("/register", async (req, res) => {
   try {
     const { full_name, phone, role } = req.body;
-
     const city = "تعز";
 
     if (!full_name || !phone || !role) {
       return res.status(400).json({ error: "Missing fields" });
     }
-    app.post("/admin/create-code", async (req, res) => {
-      const { admin_code, user_id } = req.body;
-
-      const admin = await pool.query(
-        "SELECT * FROM admins WHERE code=$1",
-        [admin_code]
-      );
-
-      if (admin.rowCount === 0) {
-        return res.status(403).json({ error: "Unauthorized" });
-      }
-
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-      await pool.query(
-        "INSERT INTO activation_codes (user_id, code, expires_at) VALUES ($1,$2, NOW() + INTERVAL '1 day')",
-        [user_id, code]
-      );
-
-      res.json({ code });
-    });
-    app.post("/activate", async (req, res) => {
-      const { user_id, code } = req.body;
-
-      const r = await pool.query(
-        `SELECT * FROM activation_codes 
-     WHERE user_id=$1 AND code=$2 AND used=false AND expires_at > NOW()`,
-        [user_id, code]
-      );
-
-      if (r.rowCount === 0) {
-        return res.status(400).json({ error: "Invalid or expired code" });
-      }
-
-      await pool.query("UPDATE users SET is_active=true WHERE id=$1", [user_id]);
-      await pool.query("UPDATE activation_codes SET used=true WHERE id=$1", [r.rows[0].id]);
-
-      res.json({ success: true });
-    });
-
 
     const result = await pool.query(
       `INSERT INTO users (full_name, phone, city, role)
@@ -134,49 +93,41 @@ app.post("/register", async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (e) {
-    console.error(e);
     res.status(400).json({ error: e.message });
   }
 });
-import crypto from "crypto";
 
-const activationCodes = new Map();
 
+// =================== ADMIN CREATE CODE ===================
 app.post("/admin/create-code", async (req, res) => {
-  const { admin_code, user_id } = req.body;
+  try {
+    const { admin_code, user_id } = req.body;
 
-  const admin = await pool.query(
-    "SELECT * FROM admins WHERE code=$1",
-    [admin_code]
-  );
+    const admin = await pool.query(
+      "SELECT * FROM admins WHERE code=$1",
+      [admin_code]
+    );
 
-  if (admin.rowCount === 0) {
-    return res.status(401).json({ error: "Invalid admin code" });
+    if (admin.rowCount === 0) {
+      return res.status(401).json({ error: "Invalid admin code" });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await pool.query(
+      `INSERT INTO activation_codes (user_id, code, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '1 day')`,
+      [user_id, code]
+    );
+
+    res.json({ code });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
-
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  activationCodes.set(user_id, code);
-
-  res.json({ code });
 });
 
-app.post("/activate", async (req, res) => {
-  const { user_id, code } = req.body;
 
-  if (activationCodes.get(user_id) !== code) {
-    return res.status(400).json({ error: "Invalid code" });
-  }
-
-  await pool.query(
-    "UPDATE users SET is_active=true WHERE id=$1",
-    [user_id]
-  );
-
-  activationCodes.delete(user_id);
-
-  res.json({ success: true });
-});
-// تفعيل الحساب بالكود
+// =================== ACTIVATE ACCOUNT ===================
 app.post("/activate", async (req, res) => {
   try {
     const { phone, code } = req.body;
@@ -185,7 +136,6 @@ app.post("/activate", async (req, res) => {
       return res.status(400).json({ error: "Phone and code required" });
     }
 
-    // احصل على المستخدم
     const userRes = await pool.query(
       "SELECT id, is_active FROM users WHERE phone = $1",
       [phone]
@@ -201,40 +151,38 @@ app.post("/activate", async (req, res) => {
       return res.status(400).json({ error: "User already activated" });
     }
 
-    // تحقق من الكود
     const codeRes = await pool.query(
       `SELECT id FROM activation_codes
-       WHERE user_id = $1 AND code = $2 AND used = false AND expires_at > NOW()`,
+       WHERE user_id = $1
+       AND code = $2
+       AND used = false
+       AND expires_at > NOW()`,
       [user.id, code]
     );
 
     if (codeRes.rows.length === 0) {
-      return res.status(401).json({ error: "Invalid or expired code" });
+      return res.status(400).json({ error: "Invalid or expired code" });
     }
 
-    // فعّل المستخدم
     await pool.query(
       "UPDATE users SET is_active = true WHERE id = $1",
       [user.id]
     );
 
-    // استخدم الكود (اقفله)
     await pool.query(
       "UPDATE activation_codes SET used = true WHERE id = $1",
       [codeRes.rows[0].id]
     );
 
-    res.json({ success: true, message: "Account activated successfully" });
-
+    res.json({ success: true });
   } catch (e) {
-    console.error(e);
     res.status(500).json({ error: e.message });
   }
 });
 
-// تشغيل السيرفر (Railway سيعطي PORT)
-const PORT = process.env.PORT || 3000;
 
+// =================== START ===================
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log("Server running on port", PORT);
 });
