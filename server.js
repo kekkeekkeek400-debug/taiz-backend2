@@ -293,6 +293,94 @@ app.post("/book", async (req, res) => {
   }
 });
 
+// =================== ADMIN VIEW BOOKINGS ===================
+app.get("/admin/bookings", async (req, res) => {
+  try {
+    const r = await pool.query(`
+      SELECT 
+        b.id,
+        b.start_date,
+        b.end_date,
+        b.people_count,
+        b.status,
+        u.full_name AS client_name,
+        u.phone AS client_phone,
+        s.name AS service_name,
+        p.full_name AS provider_name
+      FROM bookings b
+      JOIN users u ON b.user_id = u.id
+      JOIN services s ON b.service_id = s.id
+      JOIN users p ON s.provider_id = p.id
+      ORDER BY b.start_date DESC
+    `);
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// =================== ADMIN APPROVE / REJECT ===================
+app.post("/admin/booking-action", async (req, res) => {
+  try {
+    const { admin_code, booking_id, action } = req.body;
+
+    if (!admin_code || !booking_id || !action) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    if (!["approved", "rejected"].includes(action)) {
+      return res.status(400).json({ error: "Invalid action" });
+    }
+
+    const admin = await pool.query(
+      "SELECT id FROM admins WHERE code=$1",
+      [admin_code]
+    );
+
+    if (admin.rowCount === 0) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    await pool.query(
+      "UPDATE bookings SET status=$1 WHERE id=$2",
+      [action, booking_id]
+    );
+
+    res.json({ success: true, status: action });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// =================== PROVIDER NOTIFICATIONS ===================
+app.get("/provider/notifications/:provider_id", async (req, res) => {
+  try {
+    const { provider_id } = req.params;
+
+    const r = await pool.query(`
+      SELECT 
+        b.id,
+        b.start_date,
+        b.end_date,
+        b.people_count,
+        u.full_name AS client_name,
+        u.phone AS client_phone,
+        s.name AS service_name
+      FROM bookings b
+      JOIN users u ON b.user_id = u.id
+      JOIN services s ON b.service_id = s.id
+      WHERE s.provider_id = $1
+      AND b.status = 'approved'
+      ORDER BY b.start_date ASC
+    `, [provider_id]);
+
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // =================== START ===================
 const PORT = process.env.PORT || 3000;
