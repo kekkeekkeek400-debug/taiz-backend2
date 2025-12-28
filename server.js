@@ -247,7 +247,7 @@ app.post("/book", async (req, res) => {
 
     // 1. تأكد أن العميل موجود ومفعل
     const client = await pool.query(
-      "SELECT id, is_active FROM users WHERE id=$1 AND role='client'",
+      "SELECT id, is_active FROM users WHERE id=$1 AND role='user'",
       [user_id]
     );
 
