@@ -180,6 +180,62 @@ app.post("/activate", async (req, res) => {
   }
 });
 
+// إضافة خدمة (فندق / مطعم / مستشفى)
+app.post("/provider/add-service", async (req, res) => {
+  try {
+    const {
+      provider_id,
+      name,
+      type,
+      description,
+      price,
+      lat,
+      lng,
+      available_days,
+      open_time,
+      close_time
+    } = req.body;
+
+    if (!provider_id || !name || !price) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // تحقق أن المستخدم مزود خدمة ومفعل
+    const provider = await pool.query(
+      "SELECT * FROM users WHERE id=$1 AND role='provider' AND is_active=true",
+      [provider_id]
+    );
+
+    if (provider.rowCount === 0) {
+      return res.status(403).json({ error: "Provider not authorized" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO services 
+      (provider_id, name, type, description, price, lat, lng, available_days, open_time, close_time)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      RETURNING *`,
+      [
+        provider_id,
+        name,
+        type,
+        description,
+        price,
+        lat,
+        lng,
+        available_days,
+        open_time,
+        close_time
+      ]
+    );
+
+    res.json(result.rows[0]);
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // =================== START ===================
 const PORT = process.env.PORT || 3000;
