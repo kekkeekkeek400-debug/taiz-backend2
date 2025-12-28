@@ -176,6 +176,61 @@ app.post("/activate", async (req, res) => {
 
   res.json({ success: true });
 });
+// تفعيل الحساب بالكود
+app.post("/activate", async (req, res) => {
+  try {
+    const { phone, code } = req.body;
+
+    if (!phone || !code) {
+      return res.status(400).json({ error: "Phone and code required" });
+    }
+
+    // احصل على المستخدم
+    const userRes = await pool.query(
+      "SELECT id, is_active FROM users WHERE phone = $1",
+      [phone]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = userRes.rows[0];
+
+    if (user.is_active) {
+      return res.status(400).json({ error: "User already activated" });
+    }
+
+    // تحقق من الكود
+    const codeRes = await pool.query(
+      `SELECT id FROM activation_codes
+       WHERE user_id = $1 AND code = $2 AND used = false AND expires_at > NOW()`,
+      [user.id, code]
+    );
+
+    if (codeRes.rows.length === 0) {
+      return res.status(401).json({ error: "Invalid or expired code" });
+    }
+
+    // فعّل المستخدم
+    await pool.query(
+      "UPDATE users SET is_active = true WHERE id = $1",
+      [user.id]
+    );
+
+    // استخدم الكود (اقفله)
+    await pool.query(
+      "UPDATE activation_codes SET used = true WHERE id = $1",
+      [codeRes.rows[0].id]
+    );
+
+    res.json({ success: true, message: "Account activated successfully" });
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // تشغيل السيرفر (Railway سيعطي PORT)
 const PORT = process.env.PORT || 3000;
