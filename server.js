@@ -40,15 +40,18 @@ app.get("/test", (req, res) => {
         }
 
         async function register() {
-          const res = await fetch("/register", {
-            method: "POST",
-            headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({
-              full_name: name.value,
-              phone: phone.value,
-              role
-            })
-          });
+  const res = await fetch("/register", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      full_name: document.getElementById("name").value,
+      phone: document.getElementById("phone").value,
+      role: role
+    })
+  });
+  out.textContent = await res.text();
+}
+
           out.textContent = await res.text();
         }
       </script>
