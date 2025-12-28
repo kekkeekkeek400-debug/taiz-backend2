@@ -28,33 +28,32 @@ app.get("/test", (req, res) => {
         <button onclick="register()">تسجيل</button>
         <pre id="out"></pre>
       </div>
+<script>
+let role = "";
 
-      <script>
-        let role = "";
+function setRole(r) {
+  role = r;
+  document.getElementById("form").style.display = "block";
+  document.getElementById("title").innerText =
+    r === "client" ? "تسجيل عميل" : "تسجيل مزود خدمة";
+}
 
-        function setRole(r) {
-          role = r;
-          document.getElementById("form").style.display = "block";
-          document.getElementById("title").innerText = 
-            r === "client" ? "تسجيل عميل" : "تسجيل مزود خدمة";
-        }
-
-        async function register() {
+async function register() {
   const res = await fetch("/register", {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       full_name: document.getElementById("name").value,
       phone: document.getElementById("phone").value,
       role: role
     })
   });
-  out.textContent = await res.text();
-}
 
-          out.textContent = await res.text();
-        }
-      </script>
+  const txt = await res.text();
+  document.getElementById("out").textContent = txt;
+}
+</script>
+
     </body>
     </html>
   `);
