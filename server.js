@@ -239,16 +239,16 @@ app.post("/provider/add-service", async (req, res) => {
 // =================== BOOK SERVICE ===================
 app.post("/book", async (req, res) => {
   try {
-    const { client_id, service_id, date, time } = req.body;
+    const { user_id, service_id, date, time } = req.body;
 
-    if (!client_id || !service_id || !date || !time) {
+    if (!user_id || !service_id || !date || !time) {
       return res.status(400).json({ error: "Missing fields" });
     }
 
     // 1. تأكد أن العميل موجود ومفعل
     const client = await pool.query(
       "SELECT id, is_active FROM users WHERE id=$1 AND role='client'",
-      [client_id]
+      [user_id]
     );
 
     if (client.rowCount === 0) {
