@@ -246,17 +246,17 @@ app.post("/book", async (req, res) => {
     }
 
     // 1. تأكد أن العميل موجود ومفعل
-    const client = await pool.query(
+    const user = await pool.query(
       "SELECT id, is_active FROM users WHERE id=$1 AND role='user'",
       [user_id]
     );
 
-    if (client.rowCount === 0) {
-      return res.status(404).json({ error: "Client not found" });
+    if (user.rowCount === 0) {
+      return res.status(404).json({ error: "user not found" });
     }
 
-    if (!client.rows[0].is_active) {
-      return res.status(403).json({ error: "Client not activated" });
+    if (!user.rows[0].is_active) {
+      return res.status(403).json({ error: "user not activated" });
     }
 
     // 2. تأكد أن الخدمة موجودة
