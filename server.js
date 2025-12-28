@@ -284,7 +284,7 @@ app.post("/book", async (req, res) => {
       `INSERT INTO bookings (client_id, service_id, booking_date, booking_time)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [client_id, service_id, date, time]
+      [user_id, service_id, date, time]
     );
 
     res.json({
