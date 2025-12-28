@@ -180,7 +180,8 @@ app.post("/activate", async (req, res) => {
   }
 });
 
-// إضافة خدمة (فندق / مطعم / مستشفى)
+
+// =================== ADD SERVICE ===================
 app.post("/provider/add-service", async (req, res) => {
   try {
     const {
@@ -200,7 +201,6 @@ app.post("/provider/add-service", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // تحقق أن المستخدم مزود خدمة ومفعل
     const provider = await pool.query(
       "SELECT * FROM users WHERE id=$1 AND role='provider' AND is_active=true",
       [provider_id]
@@ -232,10 +232,11 @@ app.post("/provider/add-service", async (req, res) => {
     res.json(result.rows[0]);
 
   } catch (e) {
-    console.error(e);
     res.status(500).json({ error: e.message });
   }
 });
+
+
 // =================== BOOK SERVICE ===================
 app.post("/book", async (req, res) => {
   try {
@@ -245,21 +246,20 @@ app.post("/book", async (req, res) => {
       return res.status(400).json({ error: "Missing fields" });
     }
 
-    // 1. تأكد أن العميل موجود ومفعل
+    // العميل
     const user = await pool.query(
-      "SELECT id, is_active FROM users WHERE id=$1 AND role='user'",
+      "SELECT id, is_active FROM users WHERE id=$1 AND role='client'",
       [user_id]
     );
 
     if (user.rowCount === 0) {
-      return res.status(404).json({ error: "user not found" });
+      return res.status(404).json({ error: "Client not found" });
     }
 
     if (!user.rows[0].is_active) {
-      return res.status(403).json({ error: "user not activated" });
+      return res.status(403).json({ error: "Client not activated" });
     }
 
-    // 2. تأكد أن الخدمة موجودة
     const service = await pool.query(
       "SELECT id, provider_id FROM services WHERE id=$1",
       [service_id]
@@ -269,7 +269,6 @@ app.post("/book", async (req, res) => {
       return res.status(404).json({ error: "Service not found" });
     }
 
-    // 3. تأكد أن مزود الخدمة مفعل
     const provider = await pool.query(
       "SELECT id, is_active FROM users WHERE id=$1 AND role='provider'",
       [service.rows[0].provider_id]
@@ -279,7 +278,6 @@ app.post("/book", async (req, res) => {
       return res.status(403).json({ error: "Provider not active" });
     }
 
-    // 4. إنشاء الحجز
     const booking = await pool.query(
       `INSERT INTO bookings (client_id, service_id, booking_date, booking_time)
        VALUES ($1, $2, $3, $4)
@@ -287,16 +285,13 @@ app.post("/book", async (req, res) => {
       [user_id, service_id, date, time]
     );
 
-    res.json({
-      success: true,
-      booking: booking.rows[0]
-    });
+    res.json({ success: true, booking: booking.rows[0] });
 
   } catch (e) {
-    console.error(e);
     res.status(500).json({ error: e.message });
   }
 });
+
 
 // =================== START ===================
 const PORT = process.env.PORT || 3000;
