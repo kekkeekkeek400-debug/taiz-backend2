@@ -236,6 +236,67 @@ app.post("/provider/add-service", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+// =================== BOOK SERVICE ===================
+app.post("/book", async (req, res) => {
+  try {
+    const { client_id, service_id, date, time } = req.body;
+
+    if (!client_id || !service_id || !date || !time) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    // 1. تأكد أن العميل موجود ومفعل
+    const client = await pool.query(
+      "SELECT id, is_active FROM users WHERE id=$1 AND role='client'",
+      [client_id]
+    );
+
+    if (client.rowCount === 0) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+
+    if (!client.rows[0].is_active) {
+      return res.status(403).json({ error: "Client not activated" });
+    }
+
+    // 2. تأكد أن الخدمة موجودة
+    const service = await pool.query(
+      "SELECT id, provider_id FROM services WHERE id=$1",
+      [service_id]
+    );
+
+    if (service.rowCount === 0) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    // 3. تأكد أن مزود الخدمة مفعل
+    const provider = await pool.query(
+      "SELECT id, is_active FROM users WHERE id=$1 AND role='provider'",
+      [service.rows[0].provider_id]
+    );
+
+    if (provider.rowCount === 0 || !provider.rows[0].is_active) {
+      return res.status(403).json({ error: "Provider not active" });
+    }
+
+    // 4. إنشاء الحجز
+    const booking = await pool.query(
+      `INSERT INTO bookings (client_id, service_id, booking_date, booking_time)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [client_id, service_id, date, time]
+    );
+
+    res.json({
+      success: true,
+      booking: booking.rows[0]
+    });
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // =================== START ===================
 const PORT = process.env.PORT || 3000;
