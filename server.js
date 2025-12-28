@@ -84,6 +84,45 @@ app.post("/register", async (req, res) => {
     if (!full_name || !phone || !role) {
       return res.status(400).json({ error: "Missing fields" });
     }
+    app.post("/admin/create-code", async (req, res) => {
+      const { admin_code, user_id } = req.body;
+
+      const admin = await pool.query(
+        "SELECT * FROM admins WHERE code=$1",
+        [admin_code]
+      );
+
+      if (admin.rowCount === 0) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+      await pool.query(
+        "INSERT INTO activation_codes (user_id, code, expires_at) VALUES ($1,$2, NOW() + INTERVAL '1 day')",
+        [user_id, code]
+      );
+
+      res.json({ code });
+    });
+    app.post("/activate", async (req, res) => {
+      const { user_id, code } = req.body;
+
+      const r = await pool.query(
+        `SELECT * FROM activation_codes 
+     WHERE user_id=$1 AND code=$2 AND used=false AND expires_at > NOW()`,
+        [user_id, code]
+      );
+
+      if (r.rowCount === 0) {
+        return res.status(400).json({ error: "Invalid or expired code" });
+      }
+
+      await pool.query("UPDATE users SET is_active=true WHERE id=$1", [user_id]);
+      await pool.query("UPDATE activation_codes SET used=true WHERE id=$1", [r.rows[0].id]);
+
+      res.json({ success: true });
+    });
 
 
     const result = await pool.query(
