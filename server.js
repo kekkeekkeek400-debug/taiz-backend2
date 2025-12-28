@@ -21,7 +21,7 @@ app.get("/test", (req, res) => {
       <form id="f">
         <input placeholder="Full name" id="name"/><br><br>
         <input placeholder="Phone" id="phone"/><br><br>
-        <input placeholder="City" id="city"/><br><br>
+         
         <select id="role">
           <option value="provider">مزود خدمة</option>
           <option value="client">عميل</option>
@@ -44,12 +44,10 @@ app.get("/test", (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        full_name,
-        phone,
-        city,
-        role
-      })
-    });
+  full_name: name.value,
+  phone: phone.value,
+  role: role.value
+})
 
     document.getElementById("out").textContent = await res.text();
   };
@@ -78,11 +76,14 @@ app.get("/db", async (req, res) => {
 // تسجيل مستخدم (عميل أو مزود)
 app.post("/register", async (req, res) => {
   try {
-    const { full_name, phone, city, role } = req.body;
+    const { full_name, phone, role } = req.body;
 
-    if (!full_name || !phone || !city || !role) {
+    const city = "تعز";
+
+    if (!full_name || !phone || !role) {
       return res.status(400).json({ error: "Missing fields" });
     }
+
 
     const result = await pool.query(
       `INSERT INTO users (full_name, phone, city, role)
