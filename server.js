@@ -32,21 +32,29 @@ app.get("/test", (req, res) => {
       <pre id="out"></pre>
 
       <script>
-        document.getElementById("f").onsubmit = async (e)=>{
-          e.preventDefault();
-          const res = await fetch("/register",{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body: JSON.stringify({
-              full_name: name.value,
-              phone: phone.value,
-              city: city.value,
-              role: role.value
-            })
-          });
-          out.textContent = await res.text();
-        }
-      </script>
+  document.getElementById("f").onsubmit = async (e) => {
+    e.preventDefault();
+
+    const full_name = document.getElementById("name").value;
+    const phone = document.getElementById("phone").value;
+    const city = document.getElementById("city").value;
+    const role = document.getElementById("role").value;
+
+    const res = await fetch("/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        full_name,
+        phone,
+        city,
+        role
+      })
+    });
+
+    document.getElementById("out").textContent = await res.text();
+  };
+     </script>
+
     </body>
     </html>
   `);
