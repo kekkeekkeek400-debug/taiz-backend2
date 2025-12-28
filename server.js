@@ -23,8 +23,9 @@ app.get("/test", (req, res) => {
         <input placeholder="Phone" id="phone"/><br><br>
         <input placeholder="City" id="city"/><br><br>
         <select id="role">
-          <option value="driver">Driver</option>
-          <option value="customer">Customer</option>
+          <option value="provider">مزود خدمة</option>
+          <option value="client">عميل</option>
+
         </select><br><br>
         <button type="submit">Send</button>
       </form>
