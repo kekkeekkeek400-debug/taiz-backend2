@@ -279,7 +279,7 @@ app.post("/book", async (req, res) => {
     }
 
     const booking = await pool.query(
-      `INSERT INTO bookings (client_id, service_id, booking_date, booking_time)
+      `INSERT INTO bookings (user_id, service_id, book_date, book_time, status)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
       [user_id, service_id, date, time]
