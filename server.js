@@ -15,44 +15,43 @@ const pool = new Pool({
 });
 app.get("/test", (req, res) => {
   res.send(`
-    <html>
+ <html>
     <body style="font-family:sans-serif; padding:40px;">
-      <h2>Taiz Registration Test</h2>
-      <form id="f">
-        <input placeholder="Full name" id="name"/><br><br>
-        <input placeholder="Phone" id="phone"/><br><br>
-         
-        <select id="role">
-          <option value="provider">مزود خدمة</option>
-          <option value="client">عميل</option>
+      <h2>اختر نوع الحساب</h2>
+      <button onclick="setRole('client')">عميل</button>
+      <button onclick="setRole('provider')">مزود خدمة</button>
 
-        </select><br><br>
-        <button type="submit">Send</button>
-      </form>
-      <pre id="out"></pre>
+      <div id="form" style="display:none; margin-top:20px;">
+        <h3 id="title"></h3>
+        <input id="name" placeholder="الاسم الكامل"/><br><br>
+        <input id="phone" placeholder="رقم الهاتف"/><br><br>
+        <button onclick="register()">تسجيل</button>
+        <pre id="out"></pre>
+      </div>
 
       <script>
-  document.getElementById("f").onsubmit = async (e) => {
-    e.preventDefault();
+        let role = "";
 
-    const full_name = document.getElementById("name").value;
-    const phone = document.getElementById("phone").value;
-    const city = document.getElementById("city").value;
-    const role = document.getElementById("role").value;
+        function setRole(r) {
+          role = r;
+          document.getElementById("form").style.display = "block";
+          document.getElementById("title").innerText = 
+            r === "client" ? "تسجيل عميل" : "تسجيل مزود خدمة";
+        }
 
-    const res = await fetch("/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-  full_name: name.value,
-  phone: phone.value,
-  role: role.value
-})
-
-    document.getElementById("out").textContent = await res.text();
-  };
-     </script>
-
+        async function register() {
+          const res = await fetch("/register", {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({
+              full_name: name.value,
+              phone: phone.value,
+              role
+            })
+          });
+          out.textContent = await res.text();
+        }
+      </script>
     </body>
     </html>
   `);
