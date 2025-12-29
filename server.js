@@ -180,7 +180,6 @@ app.post("/activate", async (req, res) => {
   }
 });
 
-
 // =================== ADD SERVICE ===================
 app.post("/provider/add-service", async (req, res) => {
   try {
@@ -194,15 +193,18 @@ app.post("/provider/add-service", async (req, res) => {
       lng,
       available_days,
       open_time,
-      close_time
+      close_time,
+      features,
+      images
     } = req.body;
 
     if (!provider_id || !name || !price) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // تحقق أن المزود مفعل
     const provider = await pool.query(
-      "SELECT * FROM users WHERE id=$1 AND role='provider' AND is_active=true",
+      "SELECT id FROM users WHERE id=$1 AND role='provider' AND is_active=true",
       [provider_id]
     );
 
@@ -211,27 +213,32 @@ app.post("/provider/add-service", async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO services 
-      (provider_id, name, type, description, price, lat, lng, available_days, open_time, close_time)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-      RETURNING *`,
+      `
+      INSERT INTO services 
+      (provider_id, name, type, description, price, lat, lng, available_days, open_time, close_time, features, images)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      RETURNING *
+      `,
       [
         provider_id,
         name,
-        type,
-        description,
+        type || null,
+        description || null,
         price,
-        lat,
-        lng,
-        available_days,
-        open_time,
-        close_time
+        lat || null,
+        lng || null,
+        available_days || null,
+        open_time || null,
+        close_time || null,
+        features || [],
+        images || []
       ]
     );
 
     res.json(result.rows[0]);
 
   } catch (e) {
+    console.error(e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -280,7 +287,7 @@ app.post("/book", async (req, res) => {
       return res.status(403).json({ error: "Provider not active" });
     }
 
-    // 4) إذا كان هناك غرف (unit) تحقق منها
+    // 4) إذا كان هناك غرفة (unit) تحقق منها
     if (unit_id) {
       const unit = await pool.query(
         "SELECT id FROM units WHERE id=$1 AND service_id=$2",
@@ -292,12 +299,33 @@ app.post("/book", async (req, res) => {
       }
     }
 
-    // 5) إنشاء الحجز
+    // 5) منع التداخل (جوهر النظام)
+    const overlap = await pool.query(
+      `
+      SELECT id FROM bookings
+      WHERE service_id = $1
+      AND ($2 < end_date AND $3 > start_date)
+      AND status != 'rejected'
+      AND (
+        ($4 IS NULL AND unit_id IS NULL) OR
+        (unit_id = $4)
+      )
+      `,
+      [service_id, start_date, end_date, unit_id || null]
+    );
+
+    if (overlap.rowCount > 0) {
+      return res.status(409).json({ error: "This period is already booked" });
+    }
+
+    // 6) إنشاء الحجز
     const booking = await pool.query(
-      `INSERT INTO bookings 
-       (user_id, service_id, unit_id, start_date, end_date, people_count, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending')
-       RETURNING *`,
+      `
+      INSERT INTO bookings 
+      (user_id, service_id, unit_id, start_date, end_date, people_count, status)
+      VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+      RETURNING *
+      `,
       [user_id, service_id, unit_id || null, start_date, end_date, people_count]
     );
 
@@ -737,6 +765,11 @@ app.get("/services/near", async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+// =================== PAYMENT INFO ===================
+app.get("/payment-info", async (req, res) => {
+  const r = await pool.query("SELECT * FROM payment_info LIMIT 1");
+  res.json(r.rows[0]);
 });
 
 // =================== START ===================
